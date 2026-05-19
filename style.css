@@ -550,3 +550,47 @@ body {
   .settings-grid { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
 }
+
+/* ===== LOGIN SCREEN ===== */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: #060913;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+.login-overlay.hidden {
+  display: none !important;
+}
+.login-box {
+  width: 100%;
+  max-width: 400px;
+  padding: 36px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.login-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.login-subtitle {
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+

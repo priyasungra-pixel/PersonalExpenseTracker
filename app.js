@@ -28,6 +28,55 @@ function getSettings() {
 function saveSettings(s) {
   localStorage.setItem('expSettings', JSON.stringify(s));
 }
+
+// ===== SECURITY HELPER FUNCTIONS =====
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+function isPasswordProtected() {
+  const cfg = getSettings();
+  return cfg.passwordEnabled !== false;
+}
+
+function getPasswordHash() {
+  const cfg = getSettings();
+  return cfg.passwordHash || '927c7803ea84469f534336297471729c76351cdccae3e1a436313bcd77a918be';
+}
+
+function isAuthenticated() {
+  return sessionStorage.getItem('dashboard_authenticated') === 'true' || 
+         localStorage.getItem('dashboard_authenticated') === 'true';
+}
+
+let appInitialized = false;
+
+async function initializeDashboardApp() {
+  if (appInitialized) return;
+  appInitialized = true;
+  
+  if (!window.Chart) {
+    await new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.onload = () => {
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = 'Inter,sans-serif';
+        resolve();
+      };
+      document.head.appendChild(script);
+    });
+  }
+  
+  transactions = loadLocal();
+  populateCategoriesSelect();
+  renderAll();
+  await syncData();
+}
 function loadCategories() {
   const defaultCats = [
     'Food', 'Travel', 'Shopping', 'Entertainment', 'Health', 
@@ -765,6 +814,24 @@ function loadSettingsUI() {
   if(cfg.appsScriptUrl) document.getElementById('appsScriptUrl').value=cfg.appsScriptUrl;
   if(cfg.displayName) document.getElementById('displayName').value=cfg.displayName;
   if(cfg.monthlyBudget) document.getElementById('monthlyBudget').value=cfg.monthlyBudget;
+  
+  // Security settings
+  const enablePwd = document.getElementById('enablePasswordProtection');
+  const isProtected = isPasswordProtected();
+  enablePwd.checked = isProtected;
+  
+  const pwdFields = document.getElementById('passwordFields');
+  if (isProtected) {
+    pwdFields.classList.remove('hidden');
+  } else {
+    pwdFields.classList.add('hidden');
+  }
+  
+  // Reset fields
+  document.getElementById('currentPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmNewPassword').value = '';
+  document.getElementById('securityStatus').textContent = '';
 }
 
 // ===== ADD BALANCE MODAL =====
@@ -1047,20 +1114,19 @@ async function submitLent(e) {
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', async ()=>{
-  // Load Chart.js
-  const script=document.createElement('script');
-  script.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-  document.head.appendChild(script);
-  script.onload = async ()=>{
-    Chart.defaults.color='#94a3b8';
-    Chart.defaults.font.family='Inter,sans-serif';
-    // Load local first for instant render
-    transactions = loadLocal();
-    populateCategoriesSelect();
-    renderAll();
-    // Then sync from sheet
-    await syncData();
-  };
+  // Security initial check
+  if (isPasswordProtected() && !isAuthenticated()) {
+    // Show login screen
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    setTimeout(() => {
+      const pwdInput = document.getElementById('loginPassword');
+      if (pwdInput) pwdInput.focus();
+    }, 100);
+  } else {
+    // Already authenticated or not protected
+    document.getElementById('loginOverlay').classList.add('hidden');
+    await initializeDashboardApp();
+  }
 
   // Nav
   document.querySelectorAll('.nav-item').forEach(item=>{
@@ -1195,6 +1261,130 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     cfg.displayName=document.getElementById('displayName').value;
     cfg.monthlyBudget=document.getElementById('monthlyBudget').value;
     saveSettings(cfg); renderBalanceCard(); toast('Profile saved');
+  });
+
+  // Login handler
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pwdInput = document.getElementById('loginPassword');
+      const rememberMe = document.getElementById('rememberMe');
+      const errorEl = document.getElementById('loginError');
+      
+      errorEl.textContent = '';
+      const enteredPwd = pwdInput.value;
+      const enteredHash = await sha256(enteredPwd);
+      const expectedHash = getPasswordHash();
+      
+      if (enteredHash === expectedHash) {
+        if (rememberMe.checked) {
+          localStorage.setItem('dashboard_authenticated', 'true');
+        } else {
+          sessionStorage.setItem('dashboard_authenticated', 'true');
+        }
+        document.getElementById('loginOverlay').classList.add('hidden');
+        await initializeDashboardApp();
+        toast('✓ Access Granted');
+      } else {
+        errorEl.textContent = 'Incorrect password. Please try again.';
+        pwdInput.value = '';
+        pwdInput.focus();
+      }
+    });
+  }
+
+  // Toggle password fields visibility
+  const enableCheckbox = document.getElementById('enablePasswordProtection');
+  if (enableCheckbox) {
+    enableCheckbox.addEventListener('change', (e) => {
+      const pwdFields = document.getElementById('passwordFields');
+      if (e.target.checked) {
+        pwdFields.classList.remove('hidden');
+      } else {
+        pwdFields.classList.add('hidden');
+      }
+    });
+  }
+
+  // Save security settings
+  const saveSecurityBtn = document.getElementById('saveSecurity');
+  if (saveSecurityBtn) {
+    saveSecurityBtn.addEventListener('click', async () => {
+      const enableCheckbox = document.getElementById('enablePasswordProtection');
+      const curPwdInput = document.getElementById('currentPassword');
+      const newPwdInput = document.getElementById('newPassword');
+      const confirmPwdInput = document.getElementById('confirmNewPassword');
+      const statusEl = document.getElementById('securityStatus');
+      
+      statusEl.textContent = '';
+      statusEl.style.color = '#ef4444';
+      
+      const cfg = getSettings();
+      const isCurrentlyProtected = isPasswordProtected();
+      const currentHash = getPasswordHash();
+      
+      if (isCurrentlyProtected) {
+        const curPwd = curPwdInput.value;
+        if (!curPwd) {
+          statusEl.textContent = '❌ Please enter your current password to apply changes.';
+          return;
+        }
+        const hashedCur = await sha256(curPwd);
+        if (hashedCur !== currentHash) {
+          statusEl.textContent = '❌ Incorrect current password.';
+          return;
+        }
+      }
+      
+      if (enableCheckbox.checked) {
+        const newPwd = newPwdInput.value;
+        const confirmPwd = confirmPwdInput.value;
+        
+        if (!newPwd && !confirmPwd && cfg.passwordHash) {
+          cfg.passwordEnabled = true;
+        } else {
+          if (!newPwd || !confirmPwd) {
+            statusEl.textContent = '❌ Please enter and confirm your new password.';
+            return;
+          }
+          if (newPwd !== confirmPwd) {
+            statusEl.textContent = '❌ New passwords do not match.';
+            return;
+          }
+          if (newPwd.length < 4) {
+            statusEl.textContent = '❌ Password must be at least 4 characters long.';
+            return;
+          }
+          cfg.passwordEnabled = true;
+          cfg.passwordHash = await sha256(newPwd);
+        }
+      } else {
+        cfg.passwordEnabled = false;
+      }
+      
+      saveSettings(cfg);
+      statusEl.style.color = '#10b981';
+      statusEl.textContent = '✓ Security settings saved!';
+      toast('Security settings saved');
+      
+      curPwdInput.value = '';
+      newPwdInput.value = '';
+      confirmPwdInput.value = '';
+    });
+  }
+
+  // Lock avatar handlers (Clicking avatar triggers logout/lock)
+  document.querySelectorAll('.avatar-btn, .user-avatar-small').forEach(el => {
+    el.addEventListener('click', () => {
+      if (isPasswordProtected() && isAuthenticated()) {
+        if (confirm('Do you want to lock the dashboard?')) {
+          sessionStorage.removeItem('dashboard_authenticated');
+          localStorage.removeItem('dashboard_authenticated');
+          window.location.reload();
+        }
+      }
+    });
   });
 
   loadSettingsUI();

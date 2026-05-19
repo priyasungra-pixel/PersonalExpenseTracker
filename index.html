@@ -12,6 +12,32 @@
 </head>
 <body>
 
+  <!-- LOGIN SCREEN OVERLAY -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box glass-card">
+      <div class="login-logo">
+        <div class="brand-icon" style="margin: 0 auto 16px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h2 class="login-title">ExpenseBoard</h2>
+        <p class="login-subtitle">Enter password to unlock your financial dashboard</p>
+      </div>
+      <form id="loginForm" autocomplete="off">
+        <div class="form-field" style="margin-bottom: 16px;">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required />
+        </div>
+        <div class="login-options" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.82rem;">
+          <label style="display: flex; align-items: center; gap: 8px; color: #94a3b8; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="rememberMe" style="accent-color: #6366f1;" /> Keep me logged in
+          </label>
+        </div>
+        <div class="login-error" id="loginError" style="color: #f87171; font-size: 0.82rem; margin-bottom: 12px; min-height: 18px; text-align: center;"></div>
+        <button type="submit" class="btn-submit" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.9rem;">Unlock Dashboard</button>
+      </form>
+    </div>
+  </div>
+
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -362,6 +388,31 @@
             <input type="number" id="monthlyBudget" class="settings-input" value="0" />
           </div>
           <button class="btn-save-settings" id="saveProfile">Save Profile</button>
+        </div>
+        <div class="glass-card settings-card">
+          <h3 class="settings-section-title">Security Settings</h3>
+          <p class="settings-desc">Password protect your dashboard to restrict unauthorized access.</p>
+          <div class="settings-field">
+            <label style="display: flex; align-items: center; gap: 8px; color: #e2e8f0; cursor: pointer; user-select: none; font-weight: 500;">
+              <input type="checkbox" id="enablePasswordProtection" style="accent-color: #6366f1;" /> Enable Password Protection
+            </label>
+          </div>
+          <div id="passwordFields" class="hidden" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px; margin-bottom: 14px;">
+            <div class="settings-field" style="margin-bottom: 0;">
+              <label for="currentPassword">Current Password <span class="req">*</span></label>
+              <input type="password" id="currentPassword" class="settings-input" placeholder="Enter current password" />
+            </div>
+            <div class="settings-field" style="margin-bottom: 0;">
+              <label for="newPassword">New Password <span class="req">*</span></label>
+              <input type="password" id="newPassword" class="settings-input" placeholder="Enter new password" />
+            </div>
+            <div class="settings-field" style="margin-bottom: 0;">
+              <label for="confirmNewPassword">Confirm New Password <span class="req">*</span></label>
+              <input type="password" id="confirmNewPassword" class="settings-input" placeholder="Confirm new password" />
+            </div>
+          </div>
+          <button class="btn-save-settings" id="saveSecurity" style="margin-top: 8px;">Save Security Settings</button>
+          <div class="settings-status" id="securityStatus"></div>
         </div>
       </div>
     </div>

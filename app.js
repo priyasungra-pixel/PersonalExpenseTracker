@@ -45,7 +45,7 @@ function isPasswordProtected() {
 
 function getPasswordHash() {
   const cfg = getSettings();
-  return cfg.passwordHash || '927c7803ea84469f534336297471729c76351cdccae3e1a436313bcd77a918be';
+  return cfg.passwordHash || 'e6733b3fe80c1084ac9522e71217540f5bfdd2b929fe5748b7dedc5a0e91a12c';
 }
 
 function isAuthenticated() {

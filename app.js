@@ -76,6 +76,12 @@ async function initializeDashboardApp() {
   populateCategoriesSelect();
   renderAll();
   await syncData();
+
+  // Check URL hash/query to auto-open Add Expense modal on mobile/desktop quick-access
+  const urlParams = new URLSearchParams(window.location.search);
+  if (window.location.hash === '#add-expense' || urlParams.get('action') === 'add-expense') {
+    openModal();
+  }
 }
 function loadCategories() {
   const defaultCats = [
@@ -797,6 +803,11 @@ function closeModal() {
   document.getElementById('modalStatus').textContent='';
   editingTxId = null;
   document.querySelector('.btn-text').textContent = 'Add Expense';
+  
+  // Clear hash/query to clean up the URL after modal closes
+  if (window.location.hash === '#add-expense') {
+    history.replaceState("", document.title, window.location.pathname + window.location.search);
+  }
 }
 
 // ===== NAVIGATION =====

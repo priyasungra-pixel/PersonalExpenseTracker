@@ -549,6 +549,7 @@ body {
   .analytics-chart-card.full-width { grid-column: span 1; }
   .settings-grid { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
+  .mobile-fab { display: flex; } /* Show FAB on mobile devices */
 }
 
 /* ===== LOGIN SCREEN ===== */
@@ -593,4 +594,32 @@ body {
   color: #64748b;
   line-height: 1.4;
 }
+
+/* ===== MOBILE FLOATING ACTION BUTTON (FAB) ===== */
+.mobile-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  color: #fff;
+  display: none; /* Hidden by default on desktop */
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  z-index: 150;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.mobile-fab:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55);
+}
+.mobile-fab:active {
+  transform: scale(0.95);
+}
+
 

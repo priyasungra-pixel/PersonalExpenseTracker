@@ -89,7 +89,16 @@ function loadCategories() {
     'Utilities', 'Rent', 'Education', 'Personal', 'Family Medical', 
     'Personal Medical', 'Online Spending', 'Gift', 'Other'
   ];
-  try { return JSON.parse(localStorage.getItem('customCategories')) || defaultCats; } catch { return defaultCats; }
+  let cats = defaultCats;
+  try {
+    const stored = JSON.parse(localStorage.getItem('customCategories'));
+    if (Array.isArray(stored) && stored.length > 0) cats = stored;
+  } catch {}
+  
+  const usedCats = typeof uniqueCats === 'function' ? uniqueCats() : [];
+  const mergedCats = [...new Set([...cats, ...usedCats])];
+  saveCategories(mergedCats);
+  return mergedCats;
 }
 function saveCategories(cats) {
   localStorage.setItem('customCategories', JSON.stringify(cats));
@@ -256,6 +265,7 @@ async function syncData() {
 
   if (btn) btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 4v5h5M20 20v-5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L4 4m15.36 14.36A9 9 0 014 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Sync`;
   toast(`Synced ${transactions.length + combinedHistory.length} total entries`);
+  populateCategoriesSelect();
   renderAll();
 }
 

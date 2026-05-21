@@ -11,16 +11,17 @@ const BANK_COLORS = ['#6366f1','#f97316','#06b6d4','#10b981','#a855f7','#f59e0b'
 const SUPPORTED_BANKS = ['SBI Bank', 'Axis Bank', 'HDFC Bank', 'Cash'];
 
 let transactions = [];
+let globalBalanceHistory = [];
 let currentPage = 1;
 const PER_PAGE = 15;
 let weeklyChartInst, donutChartInst, monthlyChartInst, analyticsDonutInst, dailyChartInst;
 
 // ===== STORAGE =====
 function loadLocal() {
-  try { return JSON.parse(localStorage.getItem('expenses') || '[]'); } catch { return []; }
+  return [];
 }
 function saveLocal(data) {
-  localStorage.setItem('expenses', JSON.stringify(data));
+  // Cloud-only: No longer saving transactions to local storage
 }
 function getSettings() {
   return JSON.parse(localStorage.getItem('expSettings') || '{}');
@@ -72,10 +73,10 @@ async function initializeDashboardApp() {
     });
   }
   
-  transactions = loadLocal();
+  transactions = []; // Cloud-only: Start empty
   populateCategoriesSelect();
-  renderAll();
-  await syncData();
+  renderAll(); // Will show 0s initially
+  await syncData(); // Fetch from cloud
 
   // Check URL hash/query to auto-open Add Expense modal on mobile/desktop quick-access
   const urlParams = new URLSearchParams(window.location.search);
@@ -477,26 +478,10 @@ function renderBanks() {
 }
 
 function loadBalanceHistory() {
-  try {
-    let history = JSON.parse(localStorage.getItem('balanceHistory') || '[]');
-    let changed = false;
-    history = history.map(item => {
-      if (!item.id) {
-        item.id = 'bal_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-        changed = true;
-      }
-      return item;
-    });
-    if (changed) {
-      localStorage.setItem('balanceHistory', JSON.stringify(history));
-    }
-    return history;
-  } catch {
-    return [];
-  }
+  return globalBalanceHistory;
 }
 function saveBalanceHistory(history) {
-  localStorage.setItem('balanceHistory', JSON.stringify(history));
+  globalBalanceHistory = history;
 }
 
 // ===== CONTACTS (BALANCE LOG) =====

@@ -262,6 +262,19 @@ async function syncData() {
       }
     }
   });
+
+  const borTxs = loadBorrowTransactions();
+  borTxs.forEach(t => {
+    if (t.action === 'borrow') base[t.bank] = (base[t.bank] || 0) + t.amount;
+    else if (t.action === 'repay') base[t.bank] = (base[t.bank] || 0) - t.amount;
+  });
+
+  const lenTxs = loadLentTransactions();
+  lenTxs.forEach(t => {
+    if (t.action === 'lend') base[t.bank] = (base[t.bank] || 0) - t.amount;
+    else if (t.action === 'recover') base[t.bank] = (base[t.bank] || 0) + t.amount;
+  });
+
   saveBaseBalances(base);
 
   if (btn) btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 4v5h5M20 20v-5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L4 4m15.36 14.36A9 9 0 014 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Sync`;

@@ -357,26 +357,45 @@ function getBankBalances() {
 }
 
 // ===== BORROWED LOGIC =====
-function loadBorrowedBalances() {
-  const defaultBorrowed = {
-    'Bhuvaji': 30000,
-    'Badi Mummy': 20000,
-    'Honey': 30000,
-    'Tini': 10000
-  };
-  try {
-    const stored = localStorage.getItem('borrowedBalances');
-    if (!stored) {
-      localStorage.setItem('borrowedBalances', JSON.stringify(defaultBorrowed));
-      return defaultBorrowed;
+function loadBorrowTransactions() {
+  const stored = localStorage.getItem('borrowTransactions');
+  if (stored) return JSON.parse(stored);
+  
+  // Migration
+  const oldBalances = JSON.parse(localStorage.getItem('borrowedBalances') || '{}');
+  const txs = [];
+  const defaultBorrowed = { 'Bhuvaji': 30000, 'Badi Mummy': 20000, 'Honey': 30000, 'Tini': 10000 };
+  const toMigrate = Object.keys(oldBalances).length ? oldBalances : defaultBorrowed;
+  
+  for (const [name, amt] of Object.entries(toMigrate)) {
+    if (amt > 0) {
+      txs.push({
+        id: `bor_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
+        date: new Date().toISOString().slice(0,10),
+        name: name,
+        action: 'borrow',
+        amount: amt,
+        bank: 'Cash',
+        remark: 'Initial Balance'
+      });
     }
-    return JSON.parse(stored);
-  } catch {
-    return defaultBorrowed;
   }
+  localStorage.setItem('borrowTransactions', JSON.stringify(txs));
+  return txs;
 }
-function saveBorrowedBalances(balances) {
-  localStorage.setItem('borrowedBalances', JSON.stringify(balances));
+
+function saveBorrowTransactions(txs) {
+  localStorage.setItem('borrowTransactions', JSON.stringify(txs));
+}
+
+function loadBorrowedBalances() {
+  const txs = loadBorrowTransactions();
+  const balances = {};
+  txs.forEach(t => {
+    if (t.action === 'borrow') balances[t.name] = (balances[t.name] || 0) + t.amount;
+    else if (t.action === 'repay') balances[t.name] = Math.max(0, (balances[t.name] || 0) - t.amount);
+  });
+  return balances;
 }
 
 function renderBorrowed() {
@@ -388,38 +407,60 @@ function renderBorrowed() {
   if(!entries.length) { el.innerHTML='<p style="color:#475569;font-size:0.8rem;text-align:center;padding:12px">No borrowings logged yet</p>'; return; }
   
   el.innerHTML = entries.map(([name,amt], i)=>`
-    <div class="contact-item" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 8px;">
-      <div class="contact-left">
-        <div class="contact-avatar" style="background:#fbbf2422;color:#fbbf24">👤</div>
-        <div>
-          <span class="contact-name" style="font-size:0.82rem;font-weight:600">${name}</span>
-          <small style="color:#64748b;display:block;font-size:0.72rem">Borrowed Balance</small>
+    <div class="contact-item" onclick="openPersonHistory('${name.replace(/'/g, "\\'")}', 'borrow')" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 8px; justify-content: space-between; display: flex; align-items: center; width: 100%; cursor: pointer;">
+      <div class="contact-left" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+        <div class="contact-avatar" style="background:#fbbf2422;color:#fbbf24; flex-shrink: 0;">👤</div>
+        <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <span class="contact-name" style="font-size:0.82rem;font-weight:600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</span>
+          <small style="color:#64748b;display:block;font-size:0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Borrowed Balance</small>
         </div>
       </div>
-      <span class="contact-amount" style="color:${amt === 0 ? '#10b981' : '#fbbf24'};font-size:0.82rem">${fmt(amt)}</span>
+      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 8px;">
+        <span class="contact-amount" style="color:${amt === 0 ? '#10b981' : '#fbbf24'};font-size:0.82rem; font-weight: 600;">${fmt(amt)}</span>
+      </div>
     </div>`).join('');
 }
 
 // ===== LENT LOGIC =====
-function loadLentBalances() {
-  const defaultLent = {
-    'Mama': 30000,
-    'Renu Mosi': 35000,
-    'Ranjana Kaki': 20000
-  };
-  try {
-    const stored = localStorage.getItem('lentBalances');
-    if (!stored) {
-      localStorage.setItem('lentBalances', JSON.stringify(defaultLent));
-      return defaultLent;
+function loadLentTransactions() {
+  const stored = localStorage.getItem('lentTransactions');
+  if (stored) return JSON.parse(stored);
+  
+  // Migration
+  const oldBalances = JSON.parse(localStorage.getItem('lentBalances') || '{}');
+  const txs = [];
+  const defaultLent = { 'Mama': 30000, 'Renu Mosi': 35000, 'Ranjana Kaki': 20000 };
+  const toMigrate = Object.keys(oldBalances).length ? oldBalances : defaultLent;
+  
+  for (const [name, amt] of Object.entries(toMigrate)) {
+    if (amt > 0) {
+      txs.push({
+        id: `len_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
+        date: new Date().toISOString().slice(0,10),
+        name: name,
+        action: 'lend',
+        amount: amt,
+        bank: 'Cash',
+        remark: 'Initial Balance'
+      });
     }
-    return JSON.parse(stored);
-  } catch {
-    return defaultLent;
   }
+  localStorage.setItem('lentTransactions', JSON.stringify(txs));
+  return txs;
 }
-function saveLentBalances(balances) {
-  localStorage.setItem('lentBalances', JSON.stringify(balances));
+
+function saveLentTransactions(txs) {
+  localStorage.setItem('lentTransactions', JSON.stringify(txs));
+}
+
+function loadLentBalances() {
+  const txs = loadLentTransactions();
+  const balances = {};
+  txs.forEach(t => {
+    if (t.action === 'lend') balances[t.name] = (balances[t.name] || 0) + t.amount;
+    else if (t.action === 'recover') balances[t.name] = Math.max(0, (balances[t.name] || 0) - t.amount);
+  });
+  return balances;
 }
 
 function renderLent() {
@@ -431,17 +472,127 @@ function renderLent() {
   if(!entries.length) { el.innerHTML='<p style="color:#475569;font-size:0.8rem;text-align:center;padding:12px">No lent amounts logged yet</p>'; return; }
   
   el.innerHTML = entries.map(([name,amt], i)=>`
-    <div class="contact-item" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 8px;">
-      <div class="contact-left">
-        <div class="contact-avatar" style="background:#10b98122;color:#10b981">👤</div>
-        <div>
-          <span class="contact-name" style="font-size:0.82rem;font-weight:600">${name}</span>
-          <small style="color:#64748b;display:block;font-size:0.72rem">Lent Balance</small>
+    <div class="contact-item" onclick="openPersonHistory('${name.replace(/'/g, "\\'")}', 'lent')" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 8px; justify-content: space-between; display: flex; align-items: center; width: 100%; cursor: pointer;">
+      <div class="contact-left" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+        <div class="contact-avatar" style="background:#10b98122;color:#10b981; flex-shrink: 0;">👤</div>
+        <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <span class="contact-name" style="font-size:0.82rem;font-weight:600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</span>
+          <small style="color:#64748b;display:block;font-size:0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Lent Balance</small>
         </div>
       </div>
-      <span class="contact-amount" style="color:${amt === 0 ? '#10b981' : '#10b981'};font-size:0.82rem">${fmt(amt)}</span>
+      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 8px;">
+        <span class="contact-amount" style="color:${amt === 0 ? '#10b981' : '#10b981'};font-size:0.82rem; font-weight: 600;">${fmt(amt)}</span>
+      </div>
     </div>`).join('');
 }
+
+window.openPersonHistory = function(name, type) {
+  document.getElementById('personHistoryTitle').textContent = `${name}'s History`;
+  const listEl = document.getElementById('personHistoryList');
+  
+  let txs = [];
+  if (type === 'borrow') {
+    txs = loadBorrowTransactions().filter(t => t.name === name);
+  } else {
+    txs = loadLentTransactions().filter(t => t.name === name);
+  }
+  
+  // Sort by date desc
+  txs.sort((a,b) => new Date(b.date) - new Date(a.date));
+  
+  if (txs.length === 0) {
+    listEl.innerHTML = '<p style="color:#475569;text-align:center;">No transactions found.</p>';
+  } else {
+    listEl.innerHTML = txs.map(t => {
+      const isAdd = (type === 'borrow' && t.action === 'borrow') || (type === 'lent' && t.action === 'recover');
+      const color = isAdd ? '#10b981' : '#f87171'; // Green for money coming in, Red for money out
+      const sign = isAdd ? '+' : '-';
+      
+      return \`
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 600; text-transform: capitalize;">\${t.action} (\${t.bank})</div>
+            <div style="font-size: 0.75rem; color: #64748b;">\${new Date(t.date).toLocaleDateString()} &middot; \${t.remark}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap: 8px;">
+            <div style="color: \${color}; font-weight: 600;">\${sign}\${fmt(t.amount)}</div>
+            <button onclick="editPersonTx('\${t.id}', '\${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;">✏️</button>
+            <button onclick="deletePersonTx('\${t.id}', '\${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;color:#ef4444;">✕</button>
+          </div>
+        </div>
+      \`;
+    }).join('');
+  }
+  
+  document.getElementById('personHistoryModalOverlay').classList.add('open');
+};
+
+window.editPersonTx = function(id, type) {
+  if (type === 'borrow') {
+    const tx = loadBorrowTransactions().find(t => t.id === id);
+    if (!tx) return;
+    openBorrowModal();
+    document.getElementById('borPerson').value = tx.name;
+    document.getElementById('borAction').value = tx.action;
+    document.getElementById('borAmount').value = tx.amount;
+    document.getElementById('borBank').value = tx.bank;
+    document.getElementById('borDate').value = tx.date;
+    document.getElementById('borRemark').value = tx.remark;
+    editingBorrowTxId = id;
+  } else {
+    const tx = loadLentTransactions().find(t => t.id === id);
+    if (!tx) return;
+    openLentModal();
+    document.getElementById('lenPerson').value = tx.name;
+    document.getElementById('lenAction').value = tx.action;
+    document.getElementById('lenAmount').value = tx.amount;
+    document.getElementById('lenBank').value = tx.bank;
+    document.getElementById('lenDate').value = tx.date;
+    document.getElementById('lenRemark').value = tx.remark;
+    editingLentTxId = id;
+  }
+};
+
+window.deletePersonTx = function(id, type) {
+  if (!confirm('Are you sure you want to delete this transaction?')) return;
+  const base = loadBaseBalances();
+  
+  if (type === 'borrow') {
+    let txs = loadBorrowTransactions();
+    const idx = txs.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      const tx = txs[idx];
+      // Reverse effect on bank
+      if (tx.action === 'borrow') base[tx.bank] = (base[tx.bank] || 0) - tx.amount;
+      else base[tx.bank] = (base[tx.bank] || 0) + tx.amount;
+      
+      const name = tx.name;
+      txs.splice(idx, 1);
+      saveBorrowTransactions(txs);
+      saveBaseBalances(base);
+      renderAll();
+      openPersonHistory(name, type);
+      toast('Transaction deleted');
+    }
+  } else {
+    let txs = loadLentTransactions();
+    const idx = txs.findIndex(t => t.id === id);
+    if (idx !== -1) {
+      const tx = txs[idx];
+      // Reverse effect on bank
+      if (tx.action === 'lend') base[tx.bank] = (base[tx.bank] || 0) + tx.amount;
+      else base[tx.bank] = (base[tx.bank] || 0) - tx.amount;
+      
+      const name = tx.name;
+      txs.splice(idx, 1);
+      saveLentTransactions(txs);
+      saveBaseBalances(base);
+      renderAll();
+      openPersonHistory(name, type);
+      toast('Transaction deleted');
+    }
+  }
+};
 
 // ===== BALANCE CARD =====
 function renderBalanceCard() {
@@ -1046,6 +1197,7 @@ async function submitTransfer(e) {
 
 // ===== BORROW MODAL =====
 function openBorrowModal() {
+  editingBorrowTxId = null;
   document.getElementById('borrowModalOverlay').classList.add('open');
   document.getElementById('borrowForm').reset();
   document.getElementById('borDate').value = new Date().toISOString().slice(0, 10);
@@ -1054,35 +1206,66 @@ function closeBorrowModal() {
   document.getElementById('borrowModalOverlay').classList.remove('open');
 }
 
+let editingBorrowTxId = null;
+
 async function submitBorrow(e) {
   e.preventDefault();
   const name = document.getElementById('borPerson').value.trim();
   const action = document.getElementById('borAction').value;
   const amount = parseFloat(document.getElementById('borAmount').value);
+  const bank = document.getElementById('borBank').value;
   const date = document.getElementById('borDate').value || new Date().toISOString().slice(0, 10);
   const remark = document.getElementById('borRemark').value.trim() || (action === 'borrow' ? 'Borrowed' : 'Repaid');
   
-  if (!name || isNaN(amount) || amount <= 0) {
-    alert('Please enter a valid name and amount.');
+  if (!name || !bank || isNaN(amount) || amount <= 0) {
+    alert('Please enter a valid name, select a bank, and provide an amount.');
     return;
   }
   
-  const balances = loadBorrowedBalances();
-  if (action === 'borrow') {
-    balances[name] = (balances[name] || 0) + amount;
-    toast(`✓ Borrowed ${fmt(amount)} from ${name}`);
+  const txs = loadBorrowTransactions();
+  const base = loadBaseBalances();
+  
+  if (editingBorrowTxId) {
+    const idx = txs.findIndex(t => t.id === editingBorrowTxId);
+    if (idx !== -1) {
+      const oldTx = txs[idx];
+      if (oldTx.action === 'borrow') base[oldTx.bank] = (base[oldTx.bank] || 0) - oldTx.amount;
+      else base[oldTx.bank] = (base[oldTx.bank] || 0) + oldTx.amount;
+      
+      txs[idx] = { id: editingBorrowTxId, date, name, action, amount, bank, remark };
+      
+      if (action === 'borrow') base[bank] = (base[bank] || 0) + amount;
+      else base[bank] = (base[bank] || 0) - amount;
+      toast('✓ Borrow entry updated!');
+    }
   } else {
-    balances[name] = Math.max(0, (balances[name] || 0) - amount);
-    toast(`✓ Repaid ${fmt(amount)} to ${name}`);
+    txs.unshift({
+      id: `bor_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
+      date, name, action, amount, bank, remark
+    });
+    if (action === 'borrow') {
+      base[bank] = (base[bank] || 0) + amount;
+      toast(`✓ Borrowed ${fmt(amount)} from ${name} to ${bank}`);
+    } else {
+      base[bank] = (base[bank] || 0) - amount;
+      toast(`✓ Repaid ${fmt(amount)} to ${name} from ${bank}`);
+    }
   }
   
-  saveBorrowedBalances(balances);
+  saveBorrowTransactions(txs);
+  saveBaseBalances(base);
   closeBorrowModal();
   renderAll();
+  
+  // Update history modal if it's open
+  if (document.getElementById('personHistoryModalOverlay').classList.contains('open')) {
+    openPersonHistory(name, 'borrow');
+  }
 }
 
 // ===== LENT MODAL =====
 function openLentModal() {
+  editingLentTxId = null;
   document.getElementById('lentModalOverlay').classList.add('open');
   document.getElementById('lentForm').reset();
   document.getElementById('lenDate').value = new Date().toISOString().slice(0, 10);
@@ -1091,31 +1274,61 @@ function closeLentModal() {
   document.getElementById('lentModalOverlay').classList.remove('open');
 }
 
+let editingLentTxId = null;
+
 async function submitLent(e) {
   e.preventDefault();
   const name = document.getElementById('lenPerson').value.trim();
   const action = document.getElementById('lenAction').value;
   const amount = parseFloat(document.getElementById('lenAmount').value);
+  const bank = document.getElementById('lenBank').value;
   const date = document.getElementById('lenDate').value || new Date().toISOString().slice(0, 10);
   const remark = document.getElementById('lenRemark').value.trim() || (action === 'lend' ? 'Lent' : 'Recovered');
   
-  if (!name || isNaN(amount) || amount <= 0) {
-    alert('Please enter a valid name and amount.');
+  if (!name || !bank || isNaN(amount) || amount <= 0) {
+    alert('Please enter a valid name, select a bank, and provide an amount.');
     return;
   }
   
-  const balances = loadLentBalances();
-  if (action === 'lend') {
-    balances[name] = (balances[name] || 0) + amount;
-    toast(`✓ Lent ${fmt(amount)} to ${name}`);
+  const txs = loadLentTransactions();
+  const base = loadBaseBalances();
+  
+  if (editingLentTxId) {
+    const idx = txs.findIndex(t => t.id === editingLentTxId);
+    if (idx !== -1) {
+      const oldTx = txs[idx];
+      if (oldTx.action === 'lend') base[oldTx.bank] = (base[oldTx.bank] || 0) + oldTx.amount;
+      else base[oldTx.bank] = (base[oldTx.bank] || 0) - oldTx.amount;
+      
+      txs[idx] = { id: editingLentTxId, date, name, action, amount, bank, remark };
+      
+      if (action === 'lend') base[bank] = (base[bank] || 0) - amount;
+      else base[bank] = (base[bank] || 0) + amount;
+      toast('✓ Lent entry updated!');
+    }
   } else {
-    balances[name] = Math.max(0, (balances[name] || 0) - amount);
-    toast(`✓ Recovered ${fmt(amount)} from ${name}`);
+    txs.unshift({
+      id: `len_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
+      date, name, action, amount, bank, remark
+    });
+    if (action === 'lend') {
+      base[bank] = (base[bank] || 0) - amount;
+      toast(`✓ Lent ${fmt(amount)} to ${name} from ${bank}`);
+    } else {
+      base[bank] = (base[bank] || 0) + amount;
+      toast(`✓ Recovered ${fmt(amount)} from ${name} to ${bank}`);
+    }
   }
   
-  saveLentBalances(balances);
+  saveLentTransactions(txs);
+  saveBaseBalances(base);
   closeLentModal();
   renderAll();
+  
+  // Update history modal if it's open
+  if (document.getElementById('personHistoryModalOverlay').classList.contains('open')) {
+    openPersonHistory(name, 'lent');
+  }
 }
 
 // ===== INIT =====

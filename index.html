@@ -604,9 +604,21 @@
             <input type="number" id="borAmount" placeholder="0.00" min="0" step="0.01" required />
           </div>
         </div>
-        <div class="form-field">
-          <label for="borRemark">Remark / Note</label>
-          <input type="text" id="borRemark" placeholder="e.g. For house construction, marriage" />
+        <div class="form-row">
+          <div class="form-field">
+            <label for="borBank">Bank / Account <span class="req">*</span></label>
+            <select id="borBank" required>
+              <option value="">Select bank</option>
+              <option value="SBI Bank">SBI Bank</option>
+              <option value="Axis Bank">Axis Bank</option>
+              <option value="HDFC Bank">HDFC Bank</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="borRemark">Remark / Note</label>
+            <input type="text" id="borRemark" placeholder="e.g. For house construction, marriage" />
+          </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-cancel" id="cancelBorrowModal">Cancel</button>
@@ -649,9 +661,21 @@
             <input type="number" id="lenAmount" placeholder="0.00" min="0" step="0.01" required />
           </div>
         </div>
-        <div class="form-field">
-          <label for="lenRemark">Remark / Note</label>
-          <input type="text" id="lenRemark" placeholder="e.g. Personal help" />
+        <div class="form-row">
+          <div class="form-field">
+            <label for="lenBank">Bank / Account <span class="req">*</span></label>
+            <select id="lenBank" required>
+              <option value="">Select bank</option>
+              <option value="SBI Bank">SBI Bank</option>
+              <option value="Axis Bank">Axis Bank</option>
+              <option value="HDFC Bank">HDFC Bank</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="lenRemark">Remark / Note</label>
+            <input type="text" id="lenRemark" placeholder="e.g. Personal help" />
+          </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn-cancel" id="cancelLentModal">Cancel</button>
@@ -660,6 +684,22 @@
       </form>
     </div>
   </div>
+
+  <!-- PERSON HISTORY MODAL -->
+  <div class="modal-overlay" id="personHistoryModalOverlay">
+    <div class="modal glass-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="personHistoryTitle">Transaction History</h2>
+        <button class="modal-close" onclick="document.getElementById('personHistoryModalOverlay').classList.remove('open')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div style="padding: 20px; max-height: 60vh; overflow-y: auto;" id="personHistoryList">
+        <!-- List populated via JS -->
+      </div>
+    </div>
+  </div>
+
 
   <!-- MOBILE FLOATING ACTION BUTTON (FAB) -->
   <button class="mobile-fab" id="openAddExpenseModal2" title="Add Expense">

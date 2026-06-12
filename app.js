@@ -508,19 +508,19 @@ window.openPersonHistory = function(name, type) {
       const color = isAdd ? '#10b981' : '#f87171'; // Green for money coming in, Red for money out
       const sign = isAdd ? '+' : '-';
       
-      return \`
+      return `
         <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
           <div>
-            <div style="font-size: 0.85rem; font-weight: 600; text-transform: capitalize;">\${t.action} (\${t.bank})</div>
-            <div style="font-size: 0.75rem; color: #64748b;">\${new Date(t.date).toLocaleDateString()} &middot; \${t.remark}</div>
+            <div style="font-size: 0.85rem; font-weight: 600; text-transform: capitalize;">${t.action} (${t.bank})</div>
+            <div style="font-size: 0.75rem; color: #64748b;">${new Date(t.date).toLocaleDateString()} &middot; ${t.remark}</div>
           </div>
           <div style="display:flex; align-items:center; gap: 8px;">
-            <div style="color: \${color}; font-weight: 600;">\${sign}\${fmt(t.amount)}</div>
-            <button onclick="editPersonTx('\${t.id}', '\${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;">✏️</button>
-            <button onclick="deletePersonTx('\${t.id}', '\${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;color:#ef4444;">✕</button>
+            <div style="color: ${color}; font-weight: 600;">${sign}${fmt(t.amount)}</div>
+            <button onclick="editPersonTx('${t.id}', '${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;">✏️</button>
+            <button onclick="deletePersonTx('${t.id}', '${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;color:#ef4444;">✕</button>
           </div>
         </div>
-      \`;
+      `;
     }).join('');
   }
   

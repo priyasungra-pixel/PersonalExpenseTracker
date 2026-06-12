@@ -1201,6 +1201,10 @@ function openBorrowModal() {
   document.getElementById('borrowModalOverlay').classList.add('open');
   document.getElementById('borrowForm').reset();
   document.getElementById('borDate').value = new Date().toISOString().slice(0, 10);
+  
+  const txs = loadBorrowTransactions();
+  const names = [...new Set(txs.map(t => t.name))];
+  document.getElementById('borPersonOptions').innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
 }
 function closeBorrowModal() {
   document.getElementById('borrowModalOverlay').classList.remove('open');
@@ -1269,6 +1273,10 @@ function openLentModal() {
   document.getElementById('lentModalOverlay').classList.add('open');
   document.getElementById('lentForm').reset();
   document.getElementById('lenDate').value = new Date().toISOString().slice(0, 10);
+  
+  const txs = loadLentTransactions();
+  const names = [...new Set(txs.map(t => t.name))];
+  document.getElementById('lenPersonOptions').innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
 }
 function closeLentModal() {
   document.getElementById('lentModalOverlay').classList.remove('open');

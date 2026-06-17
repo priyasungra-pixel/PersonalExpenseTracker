@@ -585,7 +585,9 @@ window.deletePersonTx = function(id, type) {
       saveBorrowTransactions(txs);
       saveBaseBalances(base);
       renderAll();
-      openPersonHistory(name, type);
+      if (document.getElementById('personHistoryModalOverlay').classList.contains('open')) {
+        openPersonHistory(name, type);
+      }
       toast('Transaction deleted');
     }
   } else {
@@ -602,7 +604,9 @@ window.deletePersonTx = function(id, type) {
       saveLentTransactions(txs);
       saveBaseBalances(base);
       renderAll();
-      openPersonHistory(name, type);
+      if (document.getElementById('personHistoryModalOverlay').classList.contains('open')) {
+        openPersonHistory(name, type);
+      }
       toast('Transaction deleted');
     }
   }
@@ -681,8 +685,12 @@ function renderDebtsView() {
           <small style="color:#64748b;display:block;font-size:0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.action.toUpperCase()} - ${item.date}</small>
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 8px;">
+      <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: 8px;">
         <span class="contact-amount" style="color:${item.action === 'borrow' || item.action === 'recover' ? '#10b981' : '#f87171'};font-size:0.82rem; font-weight: 600;">${item.action === 'borrow' || item.action === 'recover' ? '+' : '-'}${fmt(item.amount)}</span>
+        <div style="display: flex; gap: 8px;">
+          <button onclick="editPersonTx('${item.id}', '${item.action === 'borrow' || item.action === 'repay' ? 'borrow' : 'lent'}')" style="background:none;border:none;cursor:pointer;opacity:0.6;font-size:0.9rem;" title="Edit">✏️</button>
+          <button onclick="deletePersonTx('${item.id}', '${item.action === 'borrow' || item.action === 'repay' ? 'borrow' : 'lent'}')" style="background:none;border:none;cursor:pointer;opacity:0.6;color:#ef4444;font-size:0.9rem;" title="Delete">✕</button>
+        </div>
       </div>
     </div>`).join('');
 }

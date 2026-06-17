@@ -529,7 +529,7 @@ window.openPersonHistory = function(name, type) {
             <div style="font-size: 0.75rem; color: #64748b;">${new Date(t.date).toLocaleDateString()} &middot; ${t.remark}</div>
           </div>
           <div style="display:flex; align-items:center; gap: 8px;">
-            <div style="color: ${color}; font-weight: 600;">${sign}${fmt(t.amount)}</div>
+            <div style="color: ${color}; font-weight: 600;">${sign}${fmt(Math.abs(t.amount))}</div>
             <button onclick="editPersonTx('${t.id}', '${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;">✏️</button>
             <button onclick="deletePersonTx('${t.id}', '${type}')" style="background:none;border:none;cursor:pointer;opacity:0.6;color:#ef4444;">✕</button>
           </div>
@@ -686,7 +686,7 @@ function renderDebtsView() {
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: 8px;">
-        <span class="contact-amount" style="color:${item.action === 'borrow' || item.action === 'recover' ? '#10b981' : '#f87171'};font-size:0.82rem; font-weight: 600;">${item.action === 'borrow' || item.action === 'recover' ? '+' : '-'}${fmt(item.amount)}</span>
+        <span class="contact-amount" style="color:${item.action === 'borrow' || item.action === 'recover' ? '#10b981' : '#f87171'};font-size:0.82rem; font-weight: 600;">${item.action === 'borrow' || item.action === 'recover' ? '+' : '-'}${fmt(Math.abs(item.amount))}</span>
         <div style="display: flex; gap: 8px;">
           <button onclick="editPersonTx('${item.id}', '${item.action === 'borrow' || item.action === 'repay' ? 'borrow' : 'lent'}')" style="background:none;border:none;cursor:pointer;opacity:0.6;font-size:0.9rem;" title="Edit">✏️</button>
           <button onclick="deletePersonTx('${item.id}', '${item.action === 'borrow' || item.action === 'repay' ? 'borrow' : 'lent'}')" style="background:none;border:none;cursor:pointer;opacity:0.6;color:#ef4444;font-size:0.9rem;" title="Delete">✕</button>
@@ -866,11 +866,11 @@ function renderAllTx() {
     tbody.innerHTML = slice.map(t=> {
       let amtStr = '';
       if (t.isExpense) {
-        amtStr = `<span class="tx-amount" style="color: #f87171;">-${fmt(t.amount)}</span>`;
+        amtStr = `<span class="tx-amount" style="color: #f87171;">-${fmt(Math.abs(t.amount))}</span>`;
       } else if (t.type === 'Add Balance') {
-        amtStr = `<span class="tx-amount" style="color: #4ade80;">+${fmt(t.amount)}</span>`;
+        amtStr = `<span class="tx-amount" style="color: #4ade80;">${t.amount >= 0 ? '+' : '-'}${fmt(Math.abs(t.amount))}</span>`;
       } else { // Transfer
-        amtStr = `<span class="tx-amount" style="color: #38bdf8;">${fmt(t.amount)}</span>`;
+        amtStr = `<span class="tx-amount" style="color: #38bdf8;">${t.amount >= 0 ? '+' : '-'}${fmt(Math.abs(t.amount))}</span>`;
       }
       
       let editFn = t.isExpense ? `editTransaction('${t.id}')` : `editBalanceLog('${t.id}')`;
@@ -1494,11 +1494,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     tbody.innerHTML=res.map(t=>{
       let amtStr = '';
       if (t.isExpense) {
-        amtStr = `<span class="tx-amount" style="color: #f87171;">-${fmt(t.amount)}</span>`;
+        amtStr = `<span class="tx-amount" style="color: #f87171;">-${fmt(Math.abs(t.amount))}</span>`;
       } else if (t.type === 'Add Balance') {
-        amtStr = `<span class="tx-amount" style="color: #4ade80;">+${fmt(t.amount)}</span>`;
+        amtStr = `<span class="tx-amount" style="color: #4ade80;">${t.amount >= 0 ? '+' : '-'}${fmt(Math.abs(t.amount))}</span>`;
       } else { // Transfer
-        amtStr = `<span class="tx-amount" style="color: #94a3b8;">${fmt(t.amount)}</span>`;
+        amtStr = `<span class="tx-amount" style="color: #38bdf8;">${t.amount >= 0 ? '+' : '-'}${fmt(Math.abs(t.amount))}</span>`;
       }
       
       let editFn = t.isExpense ? `editTransaction('${t.id}')` : `editBalanceLog('${t.id}')`;

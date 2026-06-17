@@ -1147,7 +1147,7 @@ async function submitAddBalance(e) {
   const amount = parseFloat(document.getElementById('balAmount').value);
   const date = document.getElementById('balDate').value || new Date().toISOString().slice(0, 10);
   const remark = document.getElementById('balRemark').value.trim() || 'Direct Deposit';
-  if (!bank || isNaN(amount) || amount <= 0) {
+  if (!bank || isNaN(amount)) {
     alert('Please select a bank and enter a valid amount.');
     return;
   }
@@ -1678,22 +1678,16 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   loadSettingsUI();
 });
 
-// One-time adjustment for Cash balance
+// Cleanup script for infinite loop duplicates
 setTimeout(() => {
-  const currentBalances = getBankBalances();
-  // Ensure we don't keep adding adjustments if it's already 0
-  if (Math.round(currentBalances['Cash']) === 4500) {
-    const history = loadBalanceHistory();
-    history.push({
-      id: Date.now().toString(),
-      date: new Date().toISOString().slice(0,10),
-      bank: 'Cash',
-      amount: -4500,
-      remark: 'Adjustment to zero',
-      type: 'Add Balance'
-    });
+  let history = loadBalanceHistory();
+  const originalLength = history.length;
+  history = history.filter(h => h.remark !== 'Adjustment to zero');
+  if (history.length !== originalLength) {
     saveBalanceHistory(history);
-    // Reload the page to ensure sync rebuilds the baseBalances deterministically
-    location.reload();
+    console.log('Cleaned up loop duplicates');
+    // Force a UI refresh
+    setTimeout(() => { location.reload(); }, 500);
   }
-}, 1000);
+}, 3000);
+

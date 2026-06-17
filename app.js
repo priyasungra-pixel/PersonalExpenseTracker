@@ -651,7 +651,7 @@ function saveBalanceHistory(history) {
 // ===== CONTACTS (BALANCE LOG) =====
 function renderContacts() {
   const el = document.getElementById('contactsList');
-  const history = loadBalanceHistory().slice(0, 4);
+  const history = loadBalanceHistory();
   if(!history.length) { el.innerHTML='<p style="color:#475569;font-size:0.8rem;text-align:center;padding:12px">No deposits or transfers logged yet</p>'; return; }
   
   const colors = { 'Add Balance': '#10b981', 'Transfer': '#38bdf8' };

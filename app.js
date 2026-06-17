@@ -1681,11 +1681,19 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 // One-time adjustment for Cash balance
 setTimeout(() => {
   const currentBalances = getBankBalances();
-  if (currentBalances['Cash'] === 4500) {
-    const base = loadBaseBalances();
-    base['Cash'] = (base['Cash'] || 0) - 4500;
-    saveBaseBalances(base);
-    renderAll();
-    toast('Cash balance reset to 0');
+  // Ensure we don't keep adding adjustments if it's already 0
+  if (Math.round(currentBalances['Cash']) === 4500) {
+    const history = loadBalanceHistory();
+    history.push({
+      id: Date.now().toString(),
+      date: new Date().toISOString().slice(0,10),
+      bank: 'Cash',
+      amount: -4500,
+      remark: 'Adjustment to zero',
+      type: 'Add Balance'
+    });
+    saveBalanceHistory(history);
+    // Reload the page to ensure sync rebuilds the baseBalances deterministically
+    location.reload();
   }
 }, 1000);

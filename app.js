@@ -305,7 +305,7 @@ async function postAllToSheet() {
 }
 
 // ===== HELPERS =====
-function fmt(n) { return '₹' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:0}); }
+function fmt(n) { return (n < 0 ? '-' : '') + '₹' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:0}); }
 function isThisMonth(d) {
   const now = new Date(), dt = new Date(d);
   return dt.getMonth()===now.getMonth() && dt.getFullYear()===now.getFullYear();

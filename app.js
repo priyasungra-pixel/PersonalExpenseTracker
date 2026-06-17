@@ -614,10 +614,20 @@ function renderBalanceCard() {
   const totalAvailable = Object.values(bankBalances).reduce((s,v)=>s+v,0);
   
   const borrowedMap = loadBorrowedBalances();
-  const totalBorrowed = Object.values(borrowedMap).reduce((s,v)=>s+v,0);
-
   const lentMap = loadLentBalances();
-  const totalLent = Object.values(lentMap).reduce((s,v)=>s+v,0);
+  
+  let totalBorrowed = 0;
+  let totalLent = 0;
+  
+  Object.values(borrowedMap).forEach(v => {
+    if (v > 0) totalBorrowed += v;
+    else if (v < 0) totalLent += Math.abs(v);
+  });
+  
+  Object.values(lentMap).forEach(v => {
+    if (v > 0) totalLent += v;
+    else if (v < 0) totalBorrowed += Math.abs(v);
+  });
   
   document.getElementById('balanceAmount').textContent = fmt(totalAvailable);
   document.getElementById('totalSpending').textContent = fmt(total);

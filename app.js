@@ -1677,3 +1677,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   loadSettingsUI();
 });
+
+// One-time adjustment for Cash balance
+setTimeout(() => {
+  const currentBalances = getBankBalances();
+  if (currentBalances['Cash'] === 4500) {
+    const base = loadBaseBalances();
+    base['Cash'] = (base['Cash'] || 0) - 4500;
+    saveBaseBalances(base);
+    renderAll();
+    toast('Cash balance reset to 0');
+  }
+}, 1000);

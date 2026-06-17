@@ -340,6 +340,7 @@ function renderAll() {
   renderContacts();
   renderBorrowed();
   renderLent();
+  renderDebtsView();
   renderStats();
   renderWeeklyChart();
   renderDonut();
@@ -656,6 +657,34 @@ function loadBalanceHistory() {
 }
 function saveBalanceHistory(history) {
   globalBalanceHistory = history;
+}
+
+function renderDebtsView() {
+  const el = document.getElementById('debtsTransactionsList');
+  if(!el) return;
+  const borrows = loadBorrowTransactions();
+  const lents = loadLentTransactions();
+  const allDebts = [...borrows, ...lents].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  
+  if(!allDebts.length) { el.innerHTML='<p style="color:#475569;font-size:0.8rem;text-align:center;padding:12px">No transactions logged yet</p>'; return; }
+  
+  const colors = { 'borrow': '#fbbf24', 'repay': '#10b981', 'lend': '#38bdf8', 'recover': '#10b981' };
+  
+  el.innerHTML = allDebts.map(item => `
+    <div class="contact-item" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 8px; justify-content: space-between; display: flex; align-items: center; width: 100%;">
+      <div class="contact-left" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+        <div class="contact-avatar" style="background:${colors[item.action]}22;color:${colors[item.action]}; flex-shrink: 0;">
+          👤
+        </div>
+        <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <span class="contact-name" style="font-size:0.82rem;font-weight:600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</span>
+          <small style="color:#64748b;display:block;font-size:0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.action.toUpperCase()} - ${item.date}</small>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 8px;">
+        <span class="contact-amount" style="color:${item.action === 'borrow' || item.action === 'recover' ? '#10b981' : '#f87171'};font-size:0.82rem; font-weight: 600;">${item.action === 'borrow' || item.action === 'recover' ? '+' : '-'}${fmt(item.amount)}</span>
+      </div>
+    </div>`).join('');
 }
 
 // ===== CONTACTS (BALANCE LOG) =====
@@ -986,6 +1015,7 @@ function switchView(view) {
   document.getElementById('view-'+view).classList.add('active');
   document.getElementById('nav-'+view)?.classList.add('active');
   if(view==='analytics') renderAnalytics();
+  if(view==='debts') renderDebtsView();
 }
 
 // ===== SETTINGS =====

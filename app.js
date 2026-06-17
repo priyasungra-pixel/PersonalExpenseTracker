@@ -406,7 +406,7 @@ function loadBorrowedBalances() {
   const balances = {};
   txs.forEach(t => {
     if (t.action === 'borrow') balances[t.name] = (balances[t.name] || 0) + t.amount;
-    else if (t.action === 'repay') balances[t.name] = Math.max(0, (balances[t.name] || 0) - t.amount);
+    else if (t.action === 'repay') balances[t.name] = (balances[t.name] || 0) - t.amount;
   });
   return balances;
 }
@@ -471,7 +471,7 @@ function loadLentBalances() {
   const balances = {};
   txs.forEach(t => {
     if (t.action === 'lend') balances[t.name] = (balances[t.name] || 0) + t.amount;
-    else if (t.action === 'recover') balances[t.name] = Math.max(0, (balances[t.name] || 0) - t.amount);
+    else if (t.action === 'recover') balances[t.name] = (balances[t.name] || 0) - t.amount;
   });
   return balances;
 }

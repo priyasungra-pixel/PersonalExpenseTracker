@@ -473,9 +473,17 @@
         <div class="form-row">
           <div class="form-field">
             <label for="expCategory">Category <span class="req">*</span></label>
-            <select id="expCategory" required>
-              <option value="">Select category</option>
-            </select>
+            <div class="custom-select-wrapper" id="catSelectWrapper">
+              <div class="custom-select-trigger" id="catSelectTrigger">
+                <span id="catSelectLabel">Select category</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <div class="custom-select-options" id="catSelectOptions">
+                <!-- Options populated by JS -->
+              </div>
+            </div>
+            <!-- Hidden input to store the actual value for the form -->
+            <input type="hidden" id="expCategory" required />
           </div>
           <div class="form-field">
             <label for="expBank">Bank / Account <span class="req">*</span></label>

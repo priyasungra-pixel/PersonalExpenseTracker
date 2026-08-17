@@ -623,3 +623,12 @@ body {
 }
 
 
+.custom-select-wrapper { position: relative; user-select: none; }
+.custom-select-trigger { background: var(--surface-light, rgba(255,255,255,0.05)); border: 1px solid var(--border, rgba(255,255,255,0.1)); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: var(--text-primary); font-size: 0.95rem; }
+.custom-select-options { position: absolute; top: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px; max-height: 300px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); }
+.custom-select-options.open { display: block; }
+.custom-option { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; font-size: 0.95rem; color: #f8fafc; }
+.custom-option:hover { background: rgba(255,255,255,0.1); }
+.cat-edit-icon { opacity: 0; transition: opacity 0.2s; font-size: 0.9rem; padding: 4px; }
+.custom-option:hover .cat-edit-icon { opacity: 0.8; }
+.cat-edit-icon:hover { opacity: 1 !important; transform: scale(1.1); }

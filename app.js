@@ -112,40 +112,111 @@ const CAT_EMOJIS = {
 };
 
 function populateCategoriesSelect() {
-  const select = document.getElementById('expCategory');
-  if (!select) return;
+  const optionsContainer = document.getElementById('catSelectOptions');
+  if (!optionsContainer) return;
   const cats = loadCategories();
   
-  let html = '<option value="">Select category</option>';
+  let html = `<div class="custom-option" data-value="">Select category</div>`;
   cats.forEach(c => {
     const emoji = CAT_EMOJIS[c] || '🏷️';
-    html += `<option value="${c}">${emoji} ${c}</option>`;
+    html += `
+      <div class="custom-option" data-value="${c}">
+        <span>${emoji} ${c}</span>
+        <span class="cat-edit-icon" onclick="editCustomCategory(event, '${c}')" title="Edit ${c}">✏️</span>
+      </div>`;
   });
-  html += '<option value="__ADD_NEW_CATEGORY__" style="color: #6366f1; font-weight: bold;">➕ Add New Category...</option>';
-  select.innerHTML = html;
+  html += `<div class="custom-option" data-value="__ADD_NEW_CATEGORY__" style="color: #6366f1; font-weight: bold;">➕ Add New Category...</div>`;
+  optionsContainer.innerHTML = html;
+  
+  // Attach events to options
+  optionsContainer.querySelectorAll('.custom-option').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      if (e.target.classList.contains('cat-edit-icon') || e.target.closest('.cat-edit-icon')) return; // handled by onclick
+      const val = opt.getAttribute('data-value');
+      selectCategoryValue(val);
+    });
+  });
 }
 
-async function handleCategorySelectChange(e) {
-  if (e.target.value === '__ADD_NEW_CATEGORY__') {
+function selectCategoryValue(val) {
+  const optionsContainer = document.getElementById('catSelectOptions');
+  if (optionsContainer) optionsContainer.classList.remove('open');
+  
+  if (val === '__ADD_NEW_CATEGORY__') {
     const newCat = prompt('Enter the name of the new category:');
     if (newCat && newCat.trim()) {
       const trimmed = newCat.trim();
       const cats = loadCategories();
       if (cats.includes(trimmed)) {
         alert('This category already exists.');
-        e.target.value = trimmed;
         return;
       }
       cats.push(trimmed);
       saveCategories(cats);
       populateCategoriesSelect();
-      e.target.value = trimmed;
+      selectCategoryValue(trimmed);
       toast(`✓ Added new category: ${trimmed}`);
+    }
+    return;
+  }
+  
+  const input = document.getElementById('expCategory');
+  const label = document.getElementById('catSelectLabel');
+  if (input) input.value = val;
+  if (label) {
+    if (!val) {
+      label.textContent = 'Select category';
     } else {
-      e.target.value = ''; // Reset selection
+      const emoji = CAT_EMOJIS[val] || '🏷️';
+      label.textContent = `${emoji} ${val}`;
     }
   }
 }
+
+window.editCustomCategory = function(e, oldName) {
+  e.stopPropagation();
+  const cats = loadCategories();
+  const newName = prompt(`Enter a new name for category "${oldName}":`, oldName);
+  if (newName && newName.trim()) {
+    const trimmedNew = newName.trim();
+    if (cats.includes(trimmedNew) && trimmedNew !== oldName) {
+      alert('This category name already exists.');
+      return;
+    }
+    const index = cats.indexOf(oldName);
+    if (index !== -1) {
+      cats[index] = trimmedNew;
+      saveCategories(cats);
+      populateCategoriesSelect();
+      // Update label if the edited category was selected
+      const currentVal = document.getElementById('expCategory').value;
+      if (currentVal === oldName) {
+        selectCategoryValue(trimmedNew);
+      } else if (currentVal === trimmedNew) {
+        selectCategoryValue(trimmedNew);
+      }
+      toast(`✓ Category renamed to: ${trimmedNew}`);
+    }
+  }
+};
+
+// Attach event listener for custom select toggle
+document.addEventListener('DOMContentLoaded', () => {
+  const trigger = document.getElementById('catSelectTrigger');
+  if (trigger) {
+    trigger.addEventListener('click', () => {
+      document.getElementById('catSelectOptions').classList.toggle('open');
+    });
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      const wrapper = document.getElementById('catSelectWrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('catSelectOptions').classList.remove('open');
+      }
+    });
+  }
+});
+
 
 // ===== TOAST =====
 function toast(msg, type='success') {
@@ -1428,7 +1499,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('cancelModal').addEventListener('click', closeModal);
   document.getElementById('modalOverlay').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
   document.getElementById('expenseForm').addEventListener('submit', addExpense);
-  document.getElementById('expCategory').addEventListener('change', handleCategorySelectChange);
+
 
   // Add Balance triggers
   document.getElementById('openAddBalanceBtn').addEventListener('click', openAddBalanceModal);

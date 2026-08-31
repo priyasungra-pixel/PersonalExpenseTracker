@@ -715,7 +715,7 @@ function renderBalanceCard() {
 function renderBanks() {
   const el = document.getElementById('banksList');
   const balances = getBankBalances();
-  const banks = Object.entries(balances);
+  const banks = Object.entries(balances).filter(([name]) => SUPPORTED_BANKS.includes(name));
   
   el.innerHTML = banks.map(([name,amt],i)=>`
     <div class="bank-item">

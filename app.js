@@ -505,7 +505,7 @@ function renderBorrowed() {
   const el = document.getElementById('borrowedList');
   if (!el) return;
   const balances = loadBorrowedBalances();
-  const entries = Object.entries(balances);
+  const entries = Object.entries(balances).filter(([name, amt]) => amt !== 0);
   
   if(!entries.length) { el.innerHTML='<p style="color:#475569;font-size:0.8rem;text-align:center;padding:12px">No borrowings logged yet</p>'; return; }
   
@@ -570,7 +570,7 @@ function renderLent() {
   const el = document.getElementById('lentList');
   if (!el) return;
   const balances = loadLentBalances();
-  const entries = Object.entries(balances);
+  const entries = Object.entries(balances).filter(([name, amt]) => amt !== 0);
   
   if(!entries.length) { el.innerHTML='<p style="color:#475569;font-size:0.8rem;text-align:center;padding:12px">No lent amounts logged yet</p>'; return; }
   

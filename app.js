@@ -120,9 +120,12 @@ function populateCategoriesSelect() {
   cats.forEach(c => {
     const emoji = CAT_EMOJIS[c] || '🏷️';
     html += `
-      <div class="custom-option" data-value="${c}">
+      <div class="custom-option" data-value="${c}" style="display: flex; justify-content: space-between; align-items: center;">
         <span>${emoji} ${c}</span>
-        <span class="cat-edit-icon" onclick="editCustomCategory(event, '${c}')" title="Edit ${c}">✏️</span>
+        <div>
+          <span class="cat-edit-icon" onclick="editCustomCategory(event, '${c.replace(/'/g, "\\'")}')" title="Edit ${c}" style="cursor: pointer; margin-right: 8px;">✏️</span>
+          <span class="cat-delete-icon" onclick="deleteCustomCategory(event, '${c.replace(/'/g, "\\'")}')" title="Delete ${c}" style="cursor: pointer;">🗑️</span>
+        </div>
       </div>`;
   });
   html += `<div class="custom-option" data-value="__ADD_NEW_CATEGORY__" style="color: #6366f1; font-weight: bold;">➕ Add New Category...</div>`;
@@ -131,7 +134,7 @@ function populateCategoriesSelect() {
   // Attach events to options
   optionsContainer.querySelectorAll('.custom-option').forEach(opt => {
     opt.addEventListener('click', (e) => {
-      if (e.target.classList.contains('cat-edit-icon') || e.target.closest('.cat-edit-icon')) return; // handled by onclick
+      if (e.target.closest('.cat-edit-icon') || e.target.closest('.cat-delete-icon')) return; // handled by onclick
       const val = opt.getAttribute('data-value');
       selectCategoryValue(val);
     });
@@ -198,6 +201,20 @@ window.editCustomCategory = function(e, oldName) {
       toast(`✓ Category renamed to: ${trimmedNew}`);
     }
   }
+};
+
+window.deleteCustomCategory = function(e, catName) {
+  e.stopPropagation();
+  if (!confirm(`Are you sure you want to delete the category "${catName}"?`)) return;
+  let cats = loadCategories();
+  cats = cats.filter(c => c !== catName);
+  saveCategories(cats);
+  populateCategoriesSelect();
+  const currentVal = document.getElementById('expCategory').value;
+  if (currentVal === catName) {
+    selectCategoryValue('');
+  }
+  toast(`✓ Category deleted: ${catName}`);
 };
 
 // Attach event listener for custom select toggle

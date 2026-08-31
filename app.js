@@ -117,6 +117,8 @@ function populateCategoriesSelect() {
   const cats = loadCategories();
   
   let html = `<div class="custom-option" data-value="">Select category</div>`;
+  html += `<div class="custom-option" data-value="__ADD_NEW_CATEGORY__" style="color: #6366f1; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px; padding-bottom: 8px;">➕ Add New Category...</div>`;
+  
   cats.forEach(c => {
     const emoji = CAT_EMOJIS[c] || '🏷️';
     html += `
@@ -128,7 +130,6 @@ function populateCategoriesSelect() {
         </div>
       </div>`;
   });
-  html += `<div class="custom-option" data-value="__ADD_NEW_CATEGORY__" style="color: #6366f1; font-weight: bold;">➕ Add New Category...</div>`;
   optionsContainer.innerHTML = html;
   
   // Attach events to options

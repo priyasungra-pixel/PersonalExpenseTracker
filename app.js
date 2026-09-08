@@ -253,8 +253,10 @@ async function fetchFromSheet() {
     try {
       const r = await fetch(cfg.appsScriptUrl);
       const res = await r.json();
-      if (res.status === 'success' && Array.isArray(res.data)) {
-        return res.data.map(cols => {
+      if (res.status === 'success' && res.data) {
+        let txData = Array.isArray(res.data) ? res.data : (res.data.transactions || []);
+        let debtsData = (res.data && res.data.debts) || [];
+        const remote = txData.map(cols => {
           if (!cols[0] || cols[4] === undefined) return null;
           return {
             date: cols[0],
@@ -264,6 +266,13 @@ async function fetchFromSheet() {
             amount: parseFloat(cols[4]) || 0
           };
         }).filter(Boolean);
+        const remoteDebts = debtsData.map(cols => {
+          if (!cols[0]) return null;
+          return {
+            date: cols[0], name: cols[1], action: cols[2], bank: cols[3], amount: parseFloat(cols[4])||0, remark: cols[5]||''
+          };
+        }).filter(Boolean);
+        return { remote, remoteDebts };
       }
     } catch(e) {
       console.warn('Apps Script fetch failed, falling back to public CSV URL', e);
@@ -276,20 +285,33 @@ async function fetchFromSheet() {
     const csv = await r.text();
     const rows = csv.trim().split('\n').slice(1);
     const remote = rows.map(row => {
-      const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g,''));
+      // Proper CSV parsing to handle commas inside quotes
+      const cols = [];
+      let inQuote = false;
+      let val = '';
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        if (char === '"') inQuote = !inQuote;
+        else if (char === ',' && !inQuote) {
+          cols.push(val.trim().replace(/^"|"$/g, ''));
+          val = '';
+        } else val += char;
+      }
+      cols.push(val.trim().replace(/^"|"$/g, ''));
+      
       if (!cols[0] || !cols[4]) return null;
       return {
         date: cols[0],
         title: cols[1]||'',
         category: cols[2]||'Other',
         bank: cols[3]||'Cash',
-        amount: parseFloat(cols[4])||0
+        amount: parseFloat(cols[4].replace(/,/g, ''))||0
       };
     }).filter(Boolean);
-    return remote;
+    return { remote, remoteDebts: [] };
   } catch(e) { 
     console.error('Sheet fetch error', e); 
-    return []; 
+    return { remote: [], remoteDebts: [] }; 
   }
 }
 
@@ -297,7 +319,9 @@ async function fetchFromSheet() {
 async function syncData() {
   const btn = document.getElementById('syncBtn');
   if (btn) btn.textContent = '⟳ Syncing…';
-  const remote = await fetchFromSheet();
+  const fetchResult = await fetchFromSheet();
+  const remote = fetchResult.remote || [];
+  const remoteDebts = fetchResult.remoteDebts || [];
   
   const newExpenses = [];
   const newHistory = [];
@@ -338,6 +362,28 @@ async function syncData() {
 
   saveLocal(transactions);
   saveBalanceHistory(combinedHistory);
+
+  // Debts Sync
+  const getDebtKey = (item) => `${item.date}_${item.name}_${item.action}_${item.amount}_${item.bank}`;
+  const remoteDebtKeys = new Set(remoteDebts.map(getDebtKey));
+
+  const localBor = loadBorrowTransactions();
+  const localLen = loadLentTransactions();
+  
+  const remoteBor = remoteDebts.filter(d => d.action === 'borrow' || d.action === 'repay');
+  const remoteLen = remoteDebts.filter(d => d.action === 'lend' || d.action === 'recover');
+
+  const localOnlyBor = localBor.filter(l => !remoteDebtKeys.has(getDebtKey(l)));
+  const localOnlyLen = localLen.filter(l => !remoteDebtKeys.has(getDebtKey(l)));
+
+  const newBor = remoteBor.map(r => ({...r, id: `bor_${r.date}_${r.name}_${r.amount}_${Math.random().toString(36).substring(2,5)}`}));
+  const newLen = remoteLen.map(r => ({...r, id: `len_${r.date}_${r.name}_${r.amount}_${Math.random().toString(36).substring(2,5)}`}));
+
+  const combinedBor = [...newBor, ...localOnlyBor].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const combinedLen = [...newLen, ...localOnlyLen].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  saveBorrowTransactions(combinedBor);
+  saveLentTransactions(combinedLen);
 
   const base = {};
   combinedHistory.forEach(item => {
@@ -381,12 +427,16 @@ async function postAllToSheet() {
   const history = loadBalanceHistory().map(h => [h.date, h.remark, h.type, h.bank, h.amount]);
   const combined = [...expenses, ...history].sort((a, b) => new Date(a[0]) - new Date(b[0]));
   
+  const borrows = loadBorrowTransactions().map(b => [b.date, b.name, b.action, b.bank, b.amount, b.remark || '']);
+  const lents = loadLentTransactions().map(l => [l.date, l.name, l.action, l.bank, l.amount, l.remark || '']);
+  const combinedDebts = [...borrows, ...lents].sort((a,b) => new Date(a[0]) - new Date(b[0]));
+
   try {
     await fetch(cfg.appsScriptUrl, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'clearAndSync', rows: combined })
+      body: JSON.stringify({ action: 'clearAndSync', rows: combined, debts: combinedDebts })
     });
   } catch (e) {
     console.warn('Sheet write error', e);
@@ -678,6 +728,7 @@ window.deletePersonTx = function(id, type) {
         openPersonHistory(name, type);
       }
       toast('Transaction deleted');
+      postAllToSheet();
     }
   } else {
     let txs = loadLentTransactions();
@@ -697,6 +748,7 @@ window.deletePersonTx = function(id, type) {
         openPersonHistory(name, type);
       }
       toast('Transaction deleted');
+      postAllToSheet();
     }
   }
 };
@@ -1410,6 +1462,7 @@ async function submitBorrow(e) {
   saveBaseBalances(base);
   closeBorrowModal();
   renderAll();
+  postAllToSheet(); // Auto-sync to Google Sheet
   
   // Update history modal if it's open
   if (document.getElementById('personHistoryModalOverlay').classList.contains('open')) {
@@ -1482,6 +1535,7 @@ async function submitLent(e) {
   saveBaseBalances(base);
   closeLentModal();
   renderAll();
+  postAllToSheet(); // Auto-sync to Google Sheet
   
   // Update history modal if it's open
   if (document.getElementById('personHistoryModalOverlay').classList.contains('open')) {

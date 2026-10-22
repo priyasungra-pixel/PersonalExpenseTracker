@@ -26,6 +26,8 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     if (data.action === 'append') {
       appendRow(data.row);
+    } else if (data.action === 'appendDebt') {
+      appendDebtRow(data.row);
     } else if (data.action === 'clearAndSync') {
       clearAndSync(data.rows, data.debts);
     }
@@ -151,3 +153,16 @@ function appendRow(row) {
 
   sheet.appendRow(row);
 }
+
+function appendDebtRow(row) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getOrCreateSheet(ss, DEBTS_SHEET_NAME);
+
+  // Ensure header row exists
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['Date', 'Name', 'Action', 'Bank', 'Amount', 'Remark']);
+  }
+
+  sheet.appendRow(row);
+}
+

@@ -1,6 +1,7 @@
 // ===== CONFIG =====
 const SHEET_ID = '1OUk4L1PIcgqZL7pKUCP541qFEq8tkmci_OP-HxdgA20';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+const DEBTS_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Borrow/Lent`;
 const CAT_COLORS = {
   'Food':'#f97316','Travel':'#06b6d4','Shopping':'#a855f7','Entertainment':'#ec4899',
   'Health':'#10b981','Utilities':'#f59e0b','Rent':'#6366f1','Education':'#3b82f6',
@@ -11,6 +12,8 @@ const BANK_COLORS = ['#6366f1','#f97316','#06b6d4','#10b981','#a855f7','#f59e0b'
 const SUPPORTED_BANKS = ['SBI Bank', 'Axis Bank', 'HDFC Bank', 'Cash'];
 
 let transactions = [];
+let borrowTransactions = [];
+let lentTransactions = [];
 let globalBalanceHistory = [];
 let currentPage = 1;
 const PER_PAGE = 15;
@@ -73,7 +76,13 @@ async function initializeDashboardApp() {
     });
   }
   
+  // Clear legacy mock balances if present
+  localStorage.removeItem('borrowedBalances');
+  localStorage.removeItem('lentBalances');
+
   transactions = []; // Cloud-only: Start empty
+  borrowTransactions = []; // Cloud-only: Start empty
+  lentTransactions = []; // Cloud-only: Start empty
   populateCategoriesSelect();
   renderAll(); // Will show 0s initially
   await syncData(); // Fetch from cloud
@@ -244,6 +253,25 @@ function toast(msg, type='success') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
+function parseCSVRows(csvText) {
+  const rows = csvText.trim().split('\n');
+  return rows.map(row => {
+    const cols = [];
+    let inQuote = false;
+    let val = '';
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"') inQuote = !inQuote;
+      else if (char === ',' && !inQuote) {
+        cols.push(val.trim().replace(/^"|"$/g, ''));
+        val = '';
+      } else val += char;
+    }
+    cols.push(val.trim().replace(/^"|"$/g, ''));
+    return cols;
+  });
+}
+
 // ===== FETCH FROM SHEET =====
 async function fetchFromSheet() {
   const cfg = getSettings();
@@ -267,9 +295,14 @@ async function fetchFromSheet() {
           };
         }).filter(Boolean);
         const remoteDebts = debtsData.map(cols => {
-          if (!cols[0]) return null;
+          if (!cols[0] || !cols[1]) return null;
           return {
-            date: cols[0], name: cols[1], action: cols[2], bank: cols[3], amount: parseFloat(cols[4])||0, remark: cols[5]||''
+            date: cols[0],
+            name: cols[1],
+            action: (cols[2] || '').toLowerCase().trim(),
+            bank: cols[3] || 'Cash',
+            amount: parseFloat(cols[4]) || 0,
+            remark: cols[5] || ''
           };
         }).filter(Boolean);
         return { remote, remoteDebts };
@@ -279,36 +312,44 @@ async function fetchFromSheet() {
     }
   }
 
-  // 2. Fallback to public CSV URL
+  // 2. Fallback to public CSV URL (Fetches both Sheet1 and Borrow/Lent tab)
   try {
-    const r = await fetch(SHEET_URL);
-    const csv = await r.text();
-    const rows = csv.trim().split('\n').slice(1);
-    const remote = rows.map(row => {
-      // Proper CSV parsing to handle commas inside quotes
-      const cols = [];
-      let inQuote = false;
-      let val = '';
-      for (let i = 0; i < row.length; i++) {
-        const char = row[i];
-        if (char === '"') inQuote = !inQuote;
-        else if (char === ',' && !inQuote) {
-          cols.push(val.trim().replace(/^"|"$/g, ''));
-          val = '';
-        } else val += char;
-      }
-      cols.push(val.trim().replace(/^"|"$/g, ''));
-      
+    const [txRes, debtsRes] = await Promise.all([
+      fetch(SHEET_URL),
+      fetch(DEBTS_SHEET_URL).catch(() => null)
+    ]);
+    
+    const csv = await txRes.text();
+    const rows = parseCSVRows(csv).slice(1);
+    const remote = rows.map(cols => {
       if (!cols[0] || !cols[4]) return null;
       return {
         date: cols[0],
-        title: cols[1]||'',
-        category: cols[2]||'Other',
-        bank: cols[3]||'Cash',
-        amount: parseFloat(cols[4].replace(/,/g, ''))||0
+        title: cols[1] || '',
+        category: cols[2] || 'Other',
+        bank: cols[3] || 'Cash',
+        amount: parseFloat(cols[4].replace(/,/g, '')) || 0
       };
     }).filter(Boolean);
-    return { remote, remoteDebts: [] };
+
+    let remoteDebts = [];
+    if (debtsRes && debtsRes.ok) {
+      const debtsCsv = await debtsRes.text();
+      const debtsRows = parseCSVRows(debtsCsv).slice(1);
+      remoteDebts = debtsRows.map(cols => {
+        if (!cols[0] || !cols[1]) return null;
+        return {
+          date: cols[0],
+          name: cols[1],
+          action: (cols[2] || '').toLowerCase().trim(),
+          bank: cols[3] || 'Cash',
+          amount: parseFloat((cols[4] || '0').replace(/,/g, '')) || 0,
+          remark: cols[5] || ''
+        };
+      }).filter(Boolean);
+    }
+
+    return { remote, remoteDebts };
   } catch(e) { 
     console.error('Sheet fetch error', e); 
     return { remote: [], remoteDebts: [] }; 
@@ -363,27 +404,22 @@ async function syncData() {
   saveLocal(transactions);
   saveBalanceHistory(combinedHistory);
 
-  // Debts Sync
-  const getDebtKey = (item) => `${item.date}_${item.name}_${item.action}_${item.amount}_${item.bank}`;
-  const remoteDebtKeys = new Set(remoteDebts.map(getDebtKey));
-
-  const localBor = loadBorrowTransactions();
-  const localLen = loadLentTransactions();
-  
+  // Debts Sync - 100% Google Sheet driven, no dynamic dummy data
   const remoteBor = remoteDebts.filter(d => d.action === 'borrow' || d.action === 'repay');
   const remoteLen = remoteDebts.filter(d => d.action === 'lend' || d.action === 'recover');
 
-  const localOnlyBor = localBor.filter(l => !remoteDebtKeys.has(getDebtKey(l)));
-  const localOnlyLen = localLen.filter(l => !remoteDebtKeys.has(getDebtKey(l)));
+  borrowTransactions = remoteBor.map(r => ({
+    ...r,
+    id: r.id || `bor_${r.date}_${r.name}_${r.amount}_${Math.random().toString(36).substring(2,5)}`
+  })).sort((a,b) => new Date(b.date) - new Date(a.date));
 
-  const newBor = remoteBor.map(r => ({...r, id: `bor_${r.date}_${r.name}_${r.amount}_${Math.random().toString(36).substring(2,5)}`}));
-  const newLen = remoteLen.map(r => ({...r, id: `len_${r.date}_${r.name}_${r.amount}_${Math.random().toString(36).substring(2,5)}`}));
+  lentTransactions = remoteLen.map(r => ({
+    ...r,
+    id: r.id || `len_${r.date}_${r.name}_${r.amount}_${Math.random().toString(36).substring(2,5)}`
+  })).sort((a,b) => new Date(b.date) - new Date(a.date));
 
-  const combinedBor = [...newBor, ...localOnlyBor].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const combinedLen = [...newLen, ...localOnlyLen].sort((a,b)=>new Date(b.date)-new Date(a.date));
-
-  saveBorrowTransactions(combinedBor);
-  saveLentTransactions(combinedLen);
+  saveBorrowTransactions(borrowTransactions);
+  saveLentTransactions(lentTransactions);
 
   const base = {};
   combinedHistory.forEach(item => {
@@ -511,33 +547,19 @@ function getBankBalances() {
 
 // ===== BORROWED LOGIC =====
 function loadBorrowTransactions() {
-  const stored = localStorage.getItem('borrowTransactions');
-  if (stored) return JSON.parse(stored);
-  
-  // Migration
-  const oldBalances = JSON.parse(localStorage.getItem('borrowedBalances') || '{}');
-  const txs = [];
-  const defaultBorrowed = { 'Bhuvaji': 30000, 'Badi Mummy': 20000, 'Honey': 30000, 'Tini': 10000 };
-  const toMigrate = Object.keys(oldBalances).length ? oldBalances : defaultBorrowed;
-  
-  for (const [name, amt] of Object.entries(toMigrate)) {
-    if (amt > 0) {
-      txs.push({
-        id: `bor_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
-        date: new Date().toISOString().slice(0,10),
-        name: name,
-        action: 'borrow',
-        amount: amt,
-        bank: 'Cash',
-        remark: 'Initial Balance'
-      });
+  if (borrowTransactions && borrowTransactions.length > 0) return borrowTransactions;
+  try {
+    const stored = JSON.parse(localStorage.getItem('borrowTransactions') || '[]');
+    if (Array.isArray(stored) && stored.length > 0) {
+      borrowTransactions = stored;
+      return borrowTransactions;
     }
-  }
-  localStorage.setItem('borrowTransactions', JSON.stringify(txs));
-  return txs;
+  } catch(e) {}
+  return [];
 }
 
 function saveBorrowTransactions(txs) {
+  borrowTransactions = txs;
   localStorage.setItem('borrowTransactions', JSON.stringify(txs));
 }
 
@@ -576,33 +598,19 @@ function renderBorrowed() {
 
 // ===== LENT LOGIC =====
 function loadLentTransactions() {
-  const stored = localStorage.getItem('lentTransactions');
-  if (stored) return JSON.parse(stored);
-  
-  // Migration
-  const oldBalances = JSON.parse(localStorage.getItem('lentBalances') || '{}');
-  const txs = [];
-  const defaultLent = { 'Mama': 30000, 'Renu Mosi': 35000, 'Ranjana Kaki': 20000 };
-  const toMigrate = Object.keys(oldBalances).length ? oldBalances : defaultLent;
-  
-  for (const [name, amt] of Object.entries(toMigrate)) {
-    if (amt > 0) {
-      txs.push({
-        id: `len_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
-        date: new Date().toISOString().slice(0,10),
-        name: name,
-        action: 'lend',
-        amount: amt,
-        bank: 'Cash',
-        remark: 'Initial Balance'
-      });
+  if (lentTransactions && lentTransactions.length > 0) return lentTransactions;
+  try {
+    const stored = JSON.parse(localStorage.getItem('lentTransactions') || '[]');
+    if (Array.isArray(stored) && stored.length > 0) {
+      lentTransactions = stored;
+      return lentTransactions;
     }
-  }
-  localStorage.setItem('lentTransactions', JSON.stringify(txs));
-  return txs;
+  } catch(e) {}
+  return [];
 }
 
 function saveLentTransactions(txs) {
+  lentTransactions = txs;
   localStorage.setItem('lentTransactions', JSON.stringify(txs));
 }
 
